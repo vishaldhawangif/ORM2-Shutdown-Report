@@ -175,10 +175,13 @@ app.post('/api/submit', upload.any(), async (req, res) => {
 // ─── Email builder ────────────────────────────────────────────────────────────
 async function sendEmail(cfg, submission, generalPhotos, questionPhotos) {
   const transporter = nodemailer.createTransport({
-    host:   cfg.smtpHost,
-    port:   cfg.smtpPort,
-    secure: cfg.smtpPort === 465,
-    auth:   { user: cfg.smtpUser, pass: cfg.smtpPass }
+    host:               cfg.smtpHost,
+    port:               cfg.smtpPort,
+    secure:             cfg.smtpPort === 465,
+    auth:               { user: cfg.smtpUser, pass: cfg.smtpPass },
+    connectionTimeout:  10000,   // fail after 10 seconds
+    greetingTimeout:    10000,
+    socketTimeout:      15000
   });
 
   const recipients = cfg.emailRecipients[submission.line] || [];
