@@ -6,6 +6,7 @@
 const express = require('express');
 const multer = require('multer');
 const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
@@ -41,6 +42,7 @@ function getConfig() {
   if (process.env.SMTP_PASS)      file.smtpPass      = process.env.SMTP_PASS;
   if (process.env.SMTP_FROM)      file.emailFrom     = process.env.SMTP_FROM;
   if (process.env.ADMIN_PASSWORD) file.adminPassword = process.env.ADMIN_PASSWORD;
+  if (process.env.RESEND_API_KEY) file.resendApiKey  = process.env.RESEND_API_KEY;
   return file;
 }
 function saveConfig(cfg) {
@@ -172,61 +174,21 @@ app.post('/api/submit', upload.any(), async (req, res) => {
   }
 });
 
-// ─── Email builder ────────────────────────────────────────────────────────────
-async function sendEmail(cfg, submission, generalPhotos, questionPhotos) {
-  const transporter = nodemailer.createTransport({
-    host:               cfg.smtpHost,
-    port:               cfg.smtpPort,
-    secure:             cfg.smtpPort === 465,
-    auth:               { user: cfg.smtpUser, pass: cfg.smtpPass },
-    connectionTimeout:  10000,   // fail after 10 seconds
-    greetingTimeout:    10000,
-    socketTimeout:      15000
-  });
-
-  const recipients = cfg.emailRecipients[submission.line] || [];
-
-  // ── Build all attachments with descriptive names ──
-  const attachments = [];
-  let attachCounter = 1;
-
-  // Per-question photos: named "Q1-Photo1.jpg", "Q2-Photo1.jpg" etc.
-  cfg.checklistItems.forEach(item => {
-    const qFiles = questionPhotos[item.id] || [];
-    qFiles.forEach((f, i) => {
-      const ext  = path.extname(f.originalname || f.filename);
-      attachments.push({
-        filename: `Q${item.id}-Photo${i + 1}${ext}`,
-        path:     path.join(UPLOADS_DIR, f.filename),
-        cid:      `q${item.id}_photo${i + 1}`   // for potential inline use
-      });
-    });
-  });
-
-  // General photos: named "General-Photo1.jpg" etc.
-  generalPhotos.forEach((f, i) => {
-    const ext = path.extname(f.originalname || f.filename);
-    attachments.push({
-      filename: `General-Photo${i + 1}${ext}`,
-      path:     path.join(UPLOADS_DIR, f.filename)
-    });
-  });
-
-  // ── Production rows ──
+// ─── Shared HTML builder ──────────────────────────────────────────────────────
+function buildEmailHTML(cfg, submission, questionPhotos) {
   const prodRows = cfg.productionFields.map(f => `
     <tr>
       <td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;background:#f9f9f9;width:40%">${f.label}</td>
       <td style="padding:8px 12px;border:1px solid #ddd;">${submission.productionDetails[f.id] || '—'}</td>
     </tr>`).join('');
 
-  // ── Checklist rows — include per-question photo count ──
   const checklistRows = cfg.checklistItems.map(item => {
-    const ans      = submission.checklistResponses[item.id] || '—';
-    const comment  = submission.checklistComments[item.id]  || '';
-    const color    = ans === 'YES' ? '#2e7d32' : ans === 'NO' ? '#c62828' : '#555';
-    const qPhotos  = questionPhotos[item.id] || [];
+    const ans     = submission.checklistResponses[item.id] || '—';
+    const comment = submission.checklistComments[item.id]  || '';
+    const color   = ans === 'YES' ? '#2e7d32' : ans === 'NO' ? '#c62828' : '#555';
+    const qPhotos = questionPhotos[item.id] || [];
     const photoNote = qPhotos.length > 0
-      ? `<br><span style="color:#388e3c;font-size:12px;">📷 ${qPhotos.length} photo(s) attached — see Q${item.id}-Photo*.* in attachments</span>`
+      ? `<br><span style="color:#388e3c;font-size:12px;">📷 ${qPhotos.length} photo(s) attached — Q${item.id}-Photo*</span>`
       : '';
     return `
     <tr>
@@ -236,61 +198,38 @@ async function sendEmail(cfg, submission, generalPhotos, questionPhotos) {
     </tr>`;
   }).join('');
 
-  // ── Total photo count ──
-  const totalPhotos = attachments.length;
-  const photoSummary = totalPhotos > 0
-    ? `<tr><td style="padding:12px 30px 20px;">
-        <p style="background:#e8f5e9;padding:10px 14px;border-radius:6px;color:#2e7d32;margin:0;">
-          📷 <strong>${totalPhotos} photo(s)</strong> attached to this email.
-          Per-question photos are named <strong>Q[number]-Photo[number]</strong>.
-          General photos are named <strong>General-Photo[number]</strong>.
-        </p>
-       </td></tr>`
-    : '';
-
-  const html = `<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;font-family:Arial,sans-serif;background:#f4f4f4;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:20px 0;">
     <tr><td align="center">
       <table width="700" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)">
-        <!-- Header -->
         <tr><td style="background:#388e3c;padding:24px 30px;text-align:center;">
-          <h1 style="margin:0;color:#fff;font-size:22px;letter-spacing:1px;">FGF BRANDS — 1235 ORMONT</h1>
-          <h2 style="margin:6px 0 0;color:#fff;font-size:16px;font-weight:400;">Production Shutdown Report — Line ${submission.line}</h2>
+          <h1 style="margin:0;color:#fff;font-size:22px;">FGF BRANDS — 1235 ORMONT</h1>
+          <h2 style="margin:6px 0 0;color:#fff;font-size:16px;font-weight:400;">Shutdown Report — Line ${submission.line}</h2>
         </td></tr>
-        <!-- Meta -->
         <tr><td style="padding:16px 30px;border-bottom:1px solid #eee;background:#f9fbe7;">
-          <table width="100%"><tr>
-            <td style="padding:4px 0"><strong>Production:</strong> ${submission.productionName || '—'}</td>
-          </tr><tr>
-            <td style="padding:4px 0"><strong>Submitted by:</strong> ${submission.submittedBy || '—'}</td>
-          </tr><tr>
-            <td style="padding:4px 0"><strong>Date/Time:</strong> ${new Date(submission.submittedAt).toLocaleString('en-CA', { hour12: true })}</td>
-          </tr></table>
-        </td></tr>
-        <!-- Production Details -->
-        <tr><td style="padding:20px 30px;">
-          <h3 style="color:#388e3c;border-bottom:2px solid #388e3c;padding-bottom:6px;margin-top:0;">Production Details</h3>
-          <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
-            ${prodRows}
+          <table width="100%">
+            <tr><td style="padding:3px 0"><strong>Production:</strong> ${submission.productionName || '—'}</td></tr>
+            <tr><td style="padding:3px 0"><strong>Submitted by:</strong> ${submission.submittedBy || '—'}</td></tr>
+            <tr><td style="padding:3px 0"><strong>Date/Time:</strong> ${new Date(submission.submittedAt).toLocaleString('en-CA', { hour12: true })}</td></tr>
           </table>
         </td></tr>
-        <!-- Checklist -->
+        <tr><td style="padding:20px 30px;">
+          <h3 style="color:#388e3c;border-bottom:2px solid #388e3c;padding-bottom:6px;margin-top:0;">Production Details</h3>
+          <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">${prodRows}</table>
+        </td></tr>
         <tr><td style="padding:0 30px 20px;">
           <h3 style="color:#388e3c;border-bottom:2px solid #388e3c;padding-bottom:6px;">Shutdown Checklist</h3>
           <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
             <tr style="background:#388e3c;color:#fff;">
-              <th style="padding:8px 12px;text-align:left;">Checklist Item</th>
+              <th style="padding:8px 12px;text-align:left;">Item</th>
               <th style="padding:8px 12px;text-align:center;width:70px;">Answer</th>
               <th style="padding:8px 12px;text-align:left;">Comments</th>
             </tr>
             ${checklistRows}
           </table>
         </td></tr>
-        <!-- Photo summary -->
-        ${photoSummary}
-        <!-- Footer -->
         <tr><td style="background:#f0f0f0;padding:14px 30px;text-align:center;color:#888;font-size:12px;">
           FGF Brands — 1235 Ormont — Automated Shutdown Report System
         </td></tr>
@@ -298,16 +237,55 @@ async function sendEmail(cfg, submission, generalPhotos, questionPhotos) {
     </td></tr>
   </table>
 </body></html>`;
+}
 
-  // attachments array was already built above with descriptive names
+// ─── Email builder — uses Resend if API key set, falls back to SMTP ───────────
+async function sendEmail(cfg, submission, generalPhotos, questionPhotos) {
+  const recipients = cfg.emailRecipients[submission.line] || [];
+  const subject    = `[${submission.line}] Shutdown Report — ${new Date(submission.submittedAt).toLocaleDateString('en-CA')}`;
+  const html       = buildEmailHTML(cfg, submission, questionPhotos);
 
-  await transporter.sendMail({
-    from:        `"FGF Shutdown Report" <${cfg.emailFrom || cfg.smtpUser}>`,
-    to:          recipients.join(', '),
-    subject:     `[${submission.line}] Shutdown Report — ${new Date(submission.submittedAt).toLocaleDateString('en-CA')}`,
-    html,
-    attachments
+  // ── Build attachments ──
+  const attachments = [];
+  cfg.checklistItems.forEach(item => {
+    (questionPhotos[item.id] || []).forEach((f, i) => {
+      const ext = path.extname(f.originalname || f.filename);
+      attachments.push({ filename: `Q${item.id}-Photo${i+1}${ext}`, path: path.join(UPLOADS_DIR, f.filename) });
+    });
   });
+  generalPhotos.forEach((f, i) => {
+    const ext = path.extname(f.originalname || f.filename);
+    attachments.push({ filename: `General-Photo${i+1}${ext}`, path: path.join(UPLOADS_DIR, f.filename) });
+  });
+
+  // ── Send via Resend (preferred) or SMTP fallback ──
+  if (cfg.resendApiKey) {
+    const resend = new Resend(cfg.resendApiKey);
+    // Resend attachments need base64 content
+    const resendAttachments = attachments.map(a => ({
+      filename: a.filename,
+      content:  fs.readFileSync(a.path).toString('base64')
+    }));
+    await resend.emails.send({
+      from:        cfg.emailFrom || 'onboarding@resend.dev',
+      to:          recipients,
+      subject,
+      html,
+      attachments: resendAttachments
+    });
+  } else {
+    // SMTP fallback
+    const transporter = nodemailer.createTransport({
+      host: cfg.smtpHost, port: cfg.smtpPort,
+      secure: cfg.smtpPort === 465,
+      auth: { user: cfg.smtpUser, pass: cfg.smtpPass },
+      connectionTimeout: 10000, greetingTimeout: 10000, socketTimeout: 15000
+    });
+    await transporter.sendMail({
+      from: `"FGF Shutdown Report" <${cfg.emailFrom || cfg.smtpUser}>`,
+      to: recipients.join(', '), subject, html, attachments
+    });
+  }
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -329,12 +307,13 @@ app.get('/api/admin/config', adminAuth, (req, res) => {
 // ── SMTP ──
 app.post('/api/admin/smtp', adminAuth, (req, res) => {
   const cfg = getConfig();
-  const { smtpHost, smtpPort, smtpUser, smtpPass, emailFrom } = req.body;
-  if (smtpHost)  cfg.smtpHost  = smtpHost;
-  if (smtpPort)  cfg.smtpPort  = parseInt(smtpPort);
-  if (smtpUser)  cfg.smtpUser  = smtpUser;
-  if (smtpPass)  cfg.smtpPass  = smtpPass;
-  if (emailFrom) cfg.emailFrom = emailFrom;
+  const { smtpHost, smtpPort, smtpUser, smtpPass, emailFrom, resendApiKey } = req.body;
+  if (smtpHost)      cfg.smtpHost      = smtpHost;
+  if (smtpPort)      cfg.smtpPort      = parseInt(smtpPort);
+  if (smtpUser)      cfg.smtpUser      = smtpUser;
+  if (smtpPass)      cfg.smtpPass      = smtpPass;
+  if (emailFrom)     cfg.emailFrom     = emailFrom;
+  if (resendApiKey)  cfg.resendApiKey  = resendApiKey;
   saveConfig(cfg);
   res.json({ success: true });
 });
@@ -343,40 +322,45 @@ app.post('/api/admin/smtp', adminAuth, (req, res) => {
 app.post('/api/admin/test-email', adminAuth, async (req, res) => {
   const cfg = getConfig();
   const { testAddress } = req.body;
+  if (!testAddress) return res.status(400).json({ error: 'Please provide a test email address.' });
 
-  if (!cfg.smtpUser || !cfg.smtpPass) {
-    return res.status(400).json({ error: 'SMTP credentials not configured. Save your SMTP settings first.' });
-  }
-  if (!testAddress) {
-    return res.status(400).json({ error: 'Please provide a test email address.' });
-  }
+  const testHtml = `
+    <div style="font-family:Arial,sans-serif;padding:24px;max-width:500px">
+      <div style="background:#388e3c;color:#fff;padding:16px 20px;border-radius:8px 8px 0 0">
+        <strong>FGF Brands — 1235 Ormont</strong>
+      </div>
+      <div style="border:1px solid #ddd;border-top:none;padding:20px;border-radius:0 0 8px 8px">
+        <p>✅ Email is working correctly.</p>
+        <p>Shutdown report emails will be delivered successfully.</p>
+      </div>
+    </div>`;
 
   try {
-    const transporter = nodemailer.createTransport({
-      host:   cfg.smtpHost,
-      port:   cfg.smtpPort,
-      secure: cfg.smtpPort === 465,
-      auth:   { user: cfg.smtpUser, pass: cfg.smtpPass }
-    });
-
-    await transporter.verify();   // checks credentials before sending
-    await transporter.sendMail({
-      from:    `"FGF Shutdown Report" <${cfg.emailFrom || cfg.smtpUser}>`,
-      to:      testAddress,
-      subject: '✅ FGF Shutdown Report — Test Email',
-      html: `
-        <div style="font-family:Arial,sans-serif;padding:24px;max-width:500px">
-          <div style="background:#388e3c;color:#fff;padding:16px 20px;border-radius:8px 8px 0 0">
-            <strong>FGF Brands — 1235 Ormont</strong>
-          </div>
-          <div style="border:1px solid #ddd;border-top:none;padding:20px;border-radius:0 0 8px 8px">
-            <p>✅ Your SMTP settings are working correctly.</p>
-            <p>Shutdown report emails will be delivered successfully.</p>
-            <p style="color:#888;font-size:12px;margin-top:16px">Sent from the FGF Shutdown Report admin panel.</p>
-          </div>
-        </div>`
-    });
-
+    if (cfg.resendApiKey) {
+      // ── Resend ──
+      const resend = new Resend(cfg.resendApiKey);
+      await resend.emails.send({
+        from:    cfg.emailFrom || 'onboarding@resend.dev',
+        to:      [testAddress],
+        subject: '✅ FGF Shutdown Report — Test Email',
+        html:    testHtml
+      });
+    } else if (cfg.smtpUser && cfg.smtpPass) {
+      // ── SMTP fallback ──
+      const transporter = nodemailer.createTransport({
+        host: cfg.smtpHost, port: cfg.smtpPort,
+        secure: cfg.smtpPort === 465,
+        auth: { user: cfg.smtpUser, pass: cfg.smtpPass },
+        connectionTimeout: 10000, greetingTimeout: 10000, socketTimeout: 15000
+      });
+      await transporter.verify();
+      await transporter.sendMail({
+        from: `"FGF Shutdown Report" <${cfg.emailFrom || cfg.smtpUser}>`,
+        to: testAddress, subject: '✅ FGF Shutdown Report — Test Email', html: testHtml
+      });
+    } else {
+      return res.status(400).json({ error: 'No email service configured. Add a Resend API key or SMTP credentials.' });
+    }
     res.json({ success: true, message: `Test email sent to ${testAddress}` });
   } catch (err) {
     console.error('Test email error:', err.message);
