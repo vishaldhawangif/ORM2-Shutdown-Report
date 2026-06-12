@@ -536,6 +536,15 @@
         <input class="input" type="email" id="smtp-from" placeholder="shutdown-report@fgfbrands.com" />
       </div>
       <button class="btn btn-primary" onclick="saveSMTP()">Save SMTP Settings</button>
+      <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px;">
+        <label class="field-label">Send a Test Email</label>
+        <p class="text-muted" style="margin-bottom:10px;">After saving settings, send a test to confirm everything works.</p>
+        <div style="display:flex;gap:8px;">
+          <input class="input" type="email" id="test-email-addr" placeholder="Enter your email address" style="flex:1" />
+          <button class="btn btn-outline btn-sm" id="test-email-btn" onclick="sendTestEmail()">Send Test</button>
+        </div>
+        <p id="test-email-result" style="margin-top:10px;font-size:13px;display:none;"></p>
+      </div>
     </div>
   </div>
 
@@ -992,6 +1001,37 @@ async function deleteField(id) {
 }
 
 // ── Admin: SMTP ─────────────────────────────────────────────────────────────
+async function sendTestEmail() {
+  const addr    = document.getElementById('test-email-addr').value.trim();
+  const result  = document.getElementById('test-email-result');
+  const btn     = document.getElementById('test-email-btn');
+  if (!addr) { showToast('Enter a test email address', 'error'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+  result.style.display = 'none';
+
+  try {
+    const r    = await adminFetch('/api/admin/test-email', { method: 'POST', body: JSON.stringify({ testAddress: addr }) });
+    const data = await r.json();
+    result.style.display = 'block';
+    if (data.success) {
+      result.style.color = 'var(--green-dark)';
+      result.textContent = '✅ ' + data.message + ' — check your inbox (and spam folder).';
+    } else {
+      result.style.color = 'var(--red)';
+      result.textContent = '❌ ' + (data.error || 'Failed to send.');
+    }
+  } catch(e) {
+    result.style.display = 'block';
+    result.style.color   = 'var(--red)';
+    result.textContent   = '❌ ' + e.message;
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = 'Send Test';
+  }
+}
+
 async function saveSMTP() {
   const body = {
     smtpHost:  document.getElementById('smtp-host').value.trim(),
