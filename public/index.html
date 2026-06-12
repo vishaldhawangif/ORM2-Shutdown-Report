@@ -1011,8 +1011,16 @@ async function sendTestEmail() {
   btn.textContent = 'Sending…';
   result.style.display = 'none';
 
+  const controller = new AbortController();
+  const timeout    = setTimeout(() => controller.abort(), 20000); // 20s max
+
   try {
-    const r    = await adminFetch('/api/admin/test-email', { method: 'POST', body: JSON.stringify({ testAddress: addr }) });
+    const r    = await adminFetch('/api/admin/test-email', {
+      method: 'POST',
+      body:   JSON.stringify({ testAddress: addr }),
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
     const data = await r.json();
     result.style.display = 'block';
     if (data.success) {
@@ -1023,9 +1031,12 @@ async function sendTestEmail() {
       result.textContent = '❌ ' + (data.error || 'Failed to send.');
     }
   } catch(e) {
+    clearTimeout(timeout);
     result.style.display = 'block';
     result.style.color   = 'var(--red)';
-    result.textContent   = '❌ ' + e.message;
+    result.textContent   = e.name === 'AbortError'
+      ? '❌ Timed out — check your App Password is correct and 2-Step Verification is ON in Gmail.'
+      : '❌ ' + e.message;
   } finally {
     btn.disabled    = false;
     btn.textContent = 'Send Test';
