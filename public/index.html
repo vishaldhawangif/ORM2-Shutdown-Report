@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Shutdown Report — 1235 Ormont</title>
+  <style>
+    /* ── Reset ───────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    :root {
+      --green:        #4caf50;
+      --green-dark:   #388e3c;
+      --green-light:  #e8f5e9;
+      --green-mid:    #c8e6c9;
+      --red:          #e53935;
+      --red-light:    #ffebee;
+      --text:         #1a1a1a;
+      --muted:        #757575;
+      --border:       #e0e0e0;
+      --bg:           #f5f5f5;
+      --white:        #ffffff;
+      --radius:       14px;
+      --radius-sm:    8px;
+      --header-h:     60px;
+      --bottom-h:     80px;
+    }
+    html, body {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Fixed Header ────────────────────────────── */
+    .app-header {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+      height: var(--header-h);
+      background: var(--green-dark);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    }
+    .header-left  { display: flex; align-items: center; gap: 10px; min-width: 44px; }
+    .header-right { display: flex; align-items: center; gap: 8px; min-width: 44px; justify-content: flex-end; }
+    .header-center { flex: 1; text-align: center; }
+    .header-title    { font-size: 16px; font-weight: 700; color: #fff; line-height: 1.2; }
+    .header-subtitle { font-size: 11px; color: rgba(255,255,255,.75); letter-spacing: .3px; }
+    .icon-btn {
+      width: 40px; height: 40px; border: none; background: rgba(255,255,255,.15);
+      border-radius: 50%; color: #fff; font-size: 18px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .2s;
+    }
+    .icon-btn:active { background: rgba(255,255,255,.3); }
+
+    /* ── Scrollable Body ─────────────────────────── */
+    .app-body {
+      padding-top: var(--header-h);
+      min-height: 100vh;
+    }
+    .has-bottom-bar .app-body { padding-bottom: var(--bottom-h); }
+
+    /* ── Views ───────────────────────────────────── */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ── Page padding ────────────────────────────── */
+    .page { padding: 16px; max-width: 500px; margin: 0 auto; }
+
+    /* ── Line Selector ───────────────────────────── */
+    .line-hero {
+      padding: 28px 20px 16px;
+      text-align: center;
+    }
+    .line-hero h2 { font-size: 22px; font-weight: 700; color: var(--green-dark); }
+    .line-hero p  { font-size: 14px; color: var(--muted); margin-top: 4px; }
+    .line-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 14px; padding: 0 16px 24px; max-width: 400px; margin: 0 auto;
+    }
+    .line-card {
+      background: var(--white); border: 2px solid var(--border);
+      border-radius: var(--radius); padding: 32px 16px;
+      text-align: center; cursor: pointer;
+      transition: all .18s; box-shadow: 0 1px 4px rgba(0,0,0,.08);
+      -webkit-user-select: none; user-select: none;
+    }
+    .line-card:active { transform: scale(.96); background: var(--green-light); border-color: var(--green); }
+    .line-card .line-num  { font-size: 34px; font-weight: 800; color: var(--green-dark); }
+    .line-card .line-name { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+    /* ── Section Card ────────────────────────────── */
+    .section-card {
+      background: var(--white); border-radius: var(--radius);
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+      margin-bottom: 14px; overflow: hidden;
+    }
+    .section-header {
+      background: var(--green-dark); color: #fff;
+      padding: 13px 16px; font-size: 14px; font-weight: 700;
+      letter-spacing: .3px; display: flex; align-items: center; gap: 8px;
+    }
+    .section-body { padding: 16px; }
+
+    /* ── Form Fields ─────────────────────────────── */
+    .field-group { margin-bottom: 14px; }
+    .field-group:last-child { margin-bottom: 0; }
+    .field-label {
+      display: block; font-size: 12px; font-weight: 600;
+      color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .4px;
+    }
+    .field-required { color: var(--red); margin-left: 2px; }
+    .field-input {
+      width: 100%; padding: 14px 14px; border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm); font-size: 16px; color: var(--text);
+      background: var(--white); transition: border-color .2s; outline: none;
+      -webkit-appearance: none; appearance: none;
+    }
+    .field-input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(76,175,80,.15); }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* ── Checklist ───────────────────────────────── */
+    .checklist-item {
+      border-bottom: 1px solid var(--border); padding: 14px 16px;
+    }
+    .checklist-item:last-child { border-bottom: none; }
+    .cl-question { font-size: 14px; font-weight: 600; margin-bottom: 10px; line-height: 1.4; }
+    .cl-yn-row   { display: flex; gap: 10px; }
+    .yn-btn {
+      flex: 1; padding: 12px 8px; border: 2px solid var(--border); border-radius: var(--radius-sm);
+      background: var(--white); font-size: 15px; font-weight: 700; cursor: pointer;
+      transition: all .15s; text-align: center; -webkit-user-select: none; user-select: none;
+    }
+    .yn-btn:active { transform: scale(.95); }
+    .yn-btn.yes.active { background: var(--green-light); border-color: var(--green); color: var(--green-dark); }
+    .yn-btn.no.active  { background: var(--red-light);   border-color: var(--red);   color: var(--red); }
+    .cl-comment {
+      width: 100%; margin-top: 10px; padding: 10px 12px;
+      border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      font-size: 14px; color: var(--text); resize: none; outline: none;
+      font-family: inherit;
+    }
+    .cl-comment:focus { border-color: var(--green); }
+    .cl-photo-row  { margin-top: 10px; }
+    .cl-photo-btn  {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 8px 14px; border: 1.5px dashed var(--green); border-radius: var(--radius-sm);
+      background: var(--green-light); color: var(--green-dark);
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      -webkit-user-select: none; user-select: none; transition: background .15s;
+    }
+    .cl-photo-btn:active { background: var(--green-mid); }
+    .qphoto-grid   { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+
+    /* ── Photo Upload ────────────────────────────── */
+    .photo-zone {
+      border: 2px dashed var(--border); border-radius: var(--radius-sm);
+      padding: 28px 16px; text-align: center; cursor: pointer;
+      background: #fafafa; transition: all .2s;
+    }
+    .photo-zone:active, .photo-zone.drag-over { background: var(--green-light); border-color: var(--green); }
+    .photo-zone-icon { font-size: 40px; }
+    .photo-zone p    { font-size: 14px; color: var(--muted); margin-top: 6px; }
+    .photo-zone small{ font-size: 12px; color: #aaa; display: block; margin-top: 3px; }
+    .photo-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+    .photo-thumb {
+      position: relative; width: 80px; height: 80px;
+      border-radius: var(--radius-sm); overflow: hidden; border: 2px solid var(--border);
+    }
+    .photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .photo-remove {
+      position: absolute; top: 3px; right: 3px;
+      background: rgba(0,0,0,.65); color: #fff; border: none;
+      border-radius: 50%; width: 22px; height: 22px;
+      font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+
+    /* ── Bottom Action Bar ───────────────────────── */
+    .bottom-bar {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+      height: var(--bottom-h); background: var(--white);
+      border-top: 1px solid var(--border);
+      display: flex; align-items: center; padding: 0 16px;
+      box-shadow: 0 -2px 12px rgba(0,0,0,.1);
+    }
+    .bottom-bar .btn-submit {
+      width: 100%; height: 52px; border: none; border-radius: var(--radius-sm);
+      background: var(--green-dark); color: #fff; font-size: 17px; font-weight: 700;
+      cursor: pointer; transition: background .2s; letter-spacing: .3px;
+    }
+    .bottom-bar .btn-submit:active { background: var(--green); }
+    .bottom-bar .btn-submit:disabled { background: #aaa; cursor: not-allowed; }
+
+    /* ── Success ─────────────────────────────────── */
+    .success-page {
+      padding: 60px 24px; text-align: center;
+    }
+    .success-icon  { font-size: 80px; }
+    .success-page h2 { font-size: 24px; font-weight: 700; color: var(--green-dark); margin: 16px 0 8px; }
+    .success-page p  { font-size: 15px; color: var(--muted); line-height: 1.5; }
+    .btn-new-report {
+      margin-top: 32px; width: 100%; height: 52px; border: none;
+      border-radius: var(--radius-sm); background: var(--green-dark);
+      color: #fff; font-size: 16px; font-weight: 700; cursor: pointer;
+    }
+    .btn-new-report:active { background: var(--green); }
+
+    /* ── Admin Login ─────────────────────────────── */
+    .admin-login-page { padding: 40px 20px; max-width: 400px; margin: 0 auto; }
+    .admin-login-page h2 { font-size: 20px; font-weight: 700; margin-bottom: 20px; color: var(--text); }
+
+    /* ── Admin Panel ─────────────────────────────── */
+    .admin-tabs {
+      display: flex; overflow-x: auto; gap: 0;
+      background: var(--white); border-bottom: 2px solid var(--border);
+      -webkit-overflow-scrolling: touch; scrollbar-width: none;
+    }
+    .admin-tabs::-webkit-scrollbar { display: none; }
+    .tab-btn {
+      flex-shrink: 0; padding: 14px 18px; border: none; background: none;
+      font-size: 13px; font-weight: 600; color: var(--muted);
+      border-bottom: 3px solid transparent; margin-bottom: -2px;
+      cursor: pointer; white-space: nowrap;
+    }
+    .tab-btn.active { color: var(--green-dark); border-bottom-color: var(--green-dark); }
+    .tab-pane { display: none; padding: 16px; }
+    .tab-pane.active { display: block; }
+
+    /* ── Admin list items ────────────────────────── */
+    .admin-item {
+      background: var(--white); border-radius: var(--radius-sm);
+      padding: 14px 14px; margin-bottom: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.07);
+      display: flex; align-items: flex-start; gap: 10px;
+    }
+    .admin-item-text { flex: 1; font-size: 14px; line-height: 1.4; }
+    .admin-item-type { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .btn-icon {
+      width: 36px; height: 36px; border: none; border-radius: var(--radius-sm);
+      cursor: pointer; font-size: 16px; display: flex; align-items: center;
+      justify-content: center; flex-shrink: 0;
+    }
+    .btn-edit   { background: var(--green-light);  color: var(--green-dark); }
+    .btn-delete { background: var(--red-light);    color: var(--red); }
+
+    /* ── Email tags ──────────────────────────────── */
+    .email-section { margin-bottom: 20px; }
+    .email-section-title { font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .4px; }
+    .email-tags-wrap {
+      display: flex; flex-wrap: wrap; gap: 6px;
+      background: var(--white); border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm); padding: 10px; min-height: 48px;
+    }
+    .etag {
+      background: var(--green-light); color: var(--green-dark);
+      padding: 5px 10px; border-radius: 20px; font-size: 13px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .etag button { background: none; border: none; cursor: pointer; color: var(--green-dark); font-size: 15px; line-height: 1; padding: 0; }
+    .email-add-row { display: flex; gap: 8px; margin-top: 8px; }
+
+    /* ── Submissions ─────────────────────────────── */
+    .submission-card {
+      background: var(--white); border-radius: var(--radius-sm);
+      padding: 14px; margin-bottom: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.07);
+    }
+    .submission-card .sc-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+    .submission-card .sc-line { font-weight: 700; color: var(--green-dark); font-size: 15px; }
+    .submission-card .sc-time { font-size: 12px; color: var(--muted); }
+    .submission-card .sc-prod { font-size: 13px; color: var(--text); }
+    .submission-card .sc-by   { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    /* ── Generic Buttons ─────────────────────────── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 12px 20px; border-radius: var(--radius-sm); font-size: 15px;
+      font-weight: 600; cursor: pointer; border: none; transition: all .15s;
+      -webkit-user-select: none; user-select: none;
+    }
+    .btn-primary { background: var(--green-dark); color: #fff; }
+    .btn-primary:active { background: var(--green); }
+    .btn-outline { background: var(--white); color: var(--green-dark); border: 2px solid var(--green-dark); }
+    .btn-outline:active { background: var(--green-light); }
+    .btn-danger  { background: var(--white); color: var(--red); border: 2px solid var(--red); }
+    .btn-danger:active { background: var(--red-light); }
+    .btn-sm { padding: 9px 14px; font-size: 13px; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-full { width: 100%; }
+
+    /* ── Add-item row ────────────────────────────── */
+    .add-row { display: flex; gap: 8px; margin-top: 14px; }
+    .add-row input { flex: 1; }
+
+    /* ── Input (shared) ──────────────────────────── */
+    .input {
+      width: 100%; padding: 13px 14px; border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm); font-size: 15px; font-family: inherit;
+      color: var(--text); outline: none; background: var(--white);
+      -webkit-appearance: none; appearance: none;
+    }
+    .input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(76,175,80,.12); }
+    select.input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23757575' stroke-width='2' fill='none'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+
+    /* ── Spinner ─────────────────────────────────── */
+    .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; margin-right: 8px; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Toast ───────────────────────────────────── */
+    #toast {
+      position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: #333; color: #fff; padding: 12px 22px;
+      border-radius: 24px; font-size: 14px; font-weight: 500;
+      z-index: 9999; opacity: 0; transition: all .3s; pointer-events: none;
+      white-space: nowrap; max-width: 90vw; text-align: center;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #toast.success { background: var(--green-dark); }
+    #toast.error   { background: var(--red); }
+
+    /* ── Misc ────────────────────────────────────── */
+    .mt-8  { margin-top: 8px; }
+    .mt-12 { margin-top: 12px; }
+    .mt-16 { margin-top: 16px; }
+    .divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+    .text-muted { color: var(--muted); font-size: 13px; }
+    .label-badge {
+      display: inline-block; padding: 3px 10px; border-radius: 20px;
+      font-size: 12px; font-weight: 700; background: var(--green); color: #fff;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════ HEADER ══════ -->
+<header class="app-header" id="app-header">
+  <div class="header-left">
+    <button class="icon-btn" id="btn-back" onclick="goBack()" style="display:none">←</button>
+  </div>
+  <div class="header-center">
+    <div class="header-title" id="header-title">1235 Ormont</div>
+    <div class="header-subtitle" id="header-subtitle">FGF Brands — Shutdown Report</div>
+  </div>
+  <div class="header-right">
+    <button class="icon-btn" id="btn-admin-header" onclick="showAdminLogin()" title="Admin">⚙️</button>
+  </div>
+</header>
+
+<!-- ══════ VIEW: LINE SELECT ══════ -->
+<div id="view-line-select" class="view active app-body">
+  <div class="line-hero">
+    <h2>Select Your Line</h2>
+    <p>Tap the line you are reporting for</p>
+  </div>
+  <div class="line-grid">
+    <div class="line-card" onclick="selectLine('L02')">
+      <div class="line-num">L02</div>
+      <div class="line-name">Line 2</div>
+    </div>
+    <div class="line-card" onclick="selectLine('L03')">
+      <div class="line-num">L03</div>
+      <div class="line-name">Line 3</div>
+    </div>
+    <div class="line-card" onclick="selectLine('L05')">
+      <div class="line-num">L05</div>
+      <div class="line-name">Line 5</div>
+    </div>
+    <div class="line-card" onclick="selectLine('L08')">
+      <div class="line-num">L08</div>
+      <div class="line-name">Line 8</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ VIEW: FORM ══════ -->
+<div id="view-form" class="view app-body has-bottom-bar">
+  <div class="page">
+
+    <!-- Report Info -->
+    <div class="section-card">
+      <div class="section-header">🗒️ Report Info</div>
+      <div class="section-body">
+        <div class="field-group">
+          <label class="field-label">Production Name / SKU</label>
+          <input class="field-input" type="text" id="f-productionName" placeholder="e.g. SBUX Chocolate Croissant" />
+        </div>
+        <div class="field-group">
+          <label class="field-label">Submitted By <span class="field-required">*</span></label>
+          <input class="field-input" type="text" id="f-submittedBy" placeholder="Your name" autocomplete="name" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Production Details -->
+    <div class="section-card">
+      <div class="section-header">📋 Production Details</div>
+      <div class="section-body" id="production-fields-container"></div>
+    </div>
+
+    <!-- Shutdown Checklist -->
+    <div class="section-card">
+      <div class="section-header">✅ Shutdown Checklist</div>
+      <div id="checklist-container"></div>
+    </div>
+
+    <!-- Photos -->
+    <div class="section-card">
+      <div class="section-header">📷 Photos</div>
+      <div class="section-body">
+        <div class="photo-zone" id="drop-zone" onclick="document.getElementById('photo-input').click()">
+          <div class="photo-zone-icon">📷</div>
+          <p>Tap to add photos</p>
+          <small>JPG, PNG, HEIC — up to 15 MB each</small>
+        </div>
+        <input type="file" id="photo-input" accept="image/*" multiple capture="environment" style="display:none" onchange="handlePhotoSelect(this.files)" />
+        <div class="photo-grid" id="photo-preview"></div>
+      </div>
+    </div>
+
+  </div><!-- /page -->
+
+  <!-- Bottom Submit Bar -->
+  <div class="bottom-bar">
+    <button class="btn-submit" id="submit-btn" onclick="submitForm()">Submit Report</button>
+  </div>
+</div>
+
+<!-- ══════ VIEW: SUCCESS ══════ -->
+<div id="view-success" class="view app-body">
+  <div class="success-page">
+    <div class="success-icon">✅</div>
+    <h2>Report Submitted!</h2>
+    <p>Your shutdown report has been saved and emailed to the team.</p>
+    <p id="success-line-msg" style="color:var(--green-dark);font-weight:700;margin-top:8px;font-size:16px;"></p>
+    <button class="btn-new-report" onclick="goHome()">Submit Another Report</button>
+  </div>
+</div>
+
+<!-- ══════ VIEW: ADMIN LOGIN ══════ -->
+<div id="view-admin-login" class="view app-body">
+  <div class="admin-login-page">
+    <h2>🔒 Admin Login</h2>
+    <div class="field-group">
+      <label class="field-label">Password</label>
+      <input class="input" type="password" id="admin-pwd-input" placeholder="Enter admin password"
+        onkeydown="if(event.key==='Enter')adminLogin()" />
+    </div>
+    <p id="admin-login-err" style="color:var(--red);font-size:13px;margin:8px 0;display:none;">
+      Incorrect password. Please try again.
+    </p>
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      <button class="btn btn-outline" onclick="goHome()">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" onclick="adminLogin()">Login</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ VIEW: ADMIN ══════ -->
+<div id="view-admin" class="view app-body">
+  <div class="admin-tabs" id="admin-tabs">
+    <button class="tab-btn active" onclick="showTab('tab-emails', this)">📧 Emails</button>
+    <button class="tab-btn" onclick="showTab('tab-checklist', this)">✅ Checklist</button>
+    <button class="tab-btn" onclick="showTab('tab-fields', this)">📋 Fields</button>
+    <button class="tab-btn" onclick="showTab('tab-smtp', this)">⚙️ SMTP</button>
+    <button class="tab-btn" onclick="showTab('tab-submissions', this)">📁 Submissions</button>
+    <button class="tab-btn" onclick="showTab('tab-password', this)">🔑 Password</button>
+  </div>
+
+  <!-- Tab: Emails -->
+  <div id="tab-emails" class="tab-pane active" style="max-width:500px;margin:0 auto;">
+    <p class="text-muted mt-8" style="margin-bottom:16px;">Reports for each line are emailed to the addresses listed below.</p>
+    <div id="email-config-container"></div>
+  </div>
+
+  <!-- Tab: Checklist -->
+  <div id="tab-checklist" class="tab-pane" style="max-width:500px;margin:0 auto;">
+    <div id="admin-checklist-list"></div>
+    <div class="add-row">
+      <input class="input" type="text" id="new-checklist-input" placeholder="New checklist question…"
+        onkeydown="if(event.key==='Enter')addChecklistItem()" />
+      <button class="btn btn-primary btn-sm" onclick="addChecklistItem()">+ Add</button>
+    </div>
+  </div>
+
+  <!-- Tab: Fields -->
+  <div id="tab-fields" class="tab-pane" style="max-width:500px;margin:0 auto;">
+    <div id="admin-fields-list"></div>
+    <div class="divider"></div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div>
+        <label class="field-label">Field Label</label>
+        <input class="input" type="text" id="new-field-label" placeholder="e.g. Oven Temperature" />
+      </div>
+      <div>
+        <label class="field-label">Field Type</label>
+        <select class="input" id="new-field-type">
+          <option value="text">Text</option>
+          <option value="number">Number</option>
+          <option value="time">Time</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="addProductionField()">+ Add Field</button>
+    </div>
+  </div>
+
+  <!-- Tab: SMTP -->
+  <div id="tab-smtp" class="tab-pane" style="max-width:500px;margin:0 auto;">
+    <p class="text-muted" style="margin-bottom:16px;">
+      Gmail: use <strong>smtp.gmail.com</strong>, port <strong>587</strong>, App Password.<br>
+      Office 365: <strong>smtp.office365.com</strong>, port <strong>587</strong>.
+    </p>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div>
+        <label class="field-label">SMTP Host</label>
+        <input class="input" type="text" id="smtp-host" placeholder="smtp.gmail.com" />
+      </div>
+      <div>
+        <label class="field-label">SMTP Port</label>
+        <input class="input" type="number" id="smtp-port" placeholder="587" />
+      </div>
+      <div>
+        <label class="field-label">SMTP Username</label>
+        <input class="input" type="email" id="smtp-user" placeholder="sender@fgfbrands.com" />
+      </div>
+      <div>
+        <label class="field-label">SMTP Password / App Password</label>
+        <input class="input" type="password" id="smtp-pass" placeholder="Leave blank to keep current" />
+      </div>
+      <div>
+        <label class="field-label">From Address</label>
+        <input class="input" type="email" id="smtp-from" placeholder="shutdown-report@fgfbrands.com" />
+      </div>
+      <button class="btn btn-primary" onclick="saveSMTP()">Save SMTP Settings</button>
+    </div>
+  </div>
+
+  <!-- Tab: Submissions -->
+  <div id="tab-submissions" class="tab-pane" style="max-width:500px;margin:0 auto;">
+    <div id="submissions-list">
+      <p class="text-muted" style="text-align:center;padding:30px 0;">Loading…</p>
+    </div>
+  </div>
+
+  <!-- Tab: Password -->
+  <div id="tab-password" class="tab-pane" style="max-width:400px;margin:0 auto;">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div>
+        <label class="field-label">New Password</label>
+        <input class="input" type="password" id="new-pwd" placeholder="Minimum 6 characters" />
+      </div>
+      <div>
+        <label class="field-label">Confirm Password</label>
+        <input class="input" type="password" id="confirm-pwd" placeholder="Repeat new password" />
+      </div>
+      <button class="btn btn-primary" onclick="changePassword()">Update Password</button>
+    </div>
+  </div>
+
+</div><!-- /view-admin -->
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- ══════════════════════ JS ══════════════════════ -->
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let currentLine    = null;
+let adminPassword  = null;
+let selectedPhotos = [];        // general photos (bottom of form)
+let questionPhotos = {};        // { questionId: [{ file, url }, ...] }
+let viewHistory    = ['view-line-select'];
+
+// ── Default config (form renders instantly, server overrides if admin made changes) ──
+let appConfig = {
+  lines: ['L02', 'L03', 'L05', 'L08'],
+  productionFields: [
+    { id: 'doughMO',           label: 'Dough MO#',                           type: 'text',   required: true },
+    { id: 'batches',           label: 'Batches',                              type: 'number', required: true },
+    { id: 'lastDoughSection1', label: 'Time Last Dough Passed — Section 1',  type: 'time',   required: true },
+    { id: 'lastDoughSection7', label: 'Time Last Dough Passed — Section 7',  type: 'time',   required: true },
+    { id: 'packagingMO',       label: 'Packaging MO#',                       type: 'text',   required: true },
+    { id: 'casesProduced',     label: 'Cases Produced',                      type: 'number', required: true },
+    { id: 'lastProductFinish', label: 'Last Product Finish Time',            type: 'time',   required: true },
+    { id: 'partialSkids',      label: 'Partial Skids',                       type: 'number', required: false },
+    { id: 'casesInPartial',    label: 'Cases in Partial Skid',               type: 'number', required: false },
+    { id: 'productionComment', label: 'Additional Comments',                 type: 'text',   required: false }
+  ],
+  checklistItems: [
+    { id: 1, question: 'Any belt damaged at Fritsch? Write specified belt number.' },
+    { id: 2, question: 'Flour dusters & TBP & Fat pump plugged in dummy plug?' },
+    { id: 3, question: 'Is the oven empty and doors are open?' },
+    { id: 4, question: 'Proofer and Freezer off?' },
+    { id: 5, question: 'QA tool record — Packaging and Dividing handed over to the QA Team?' },
+    { id: 6, question: 'Packaging, Dividing, and Baking carts cleaned & RF scanner charged?' },
+    { id: 7, question: 'All leftover manual case labels discarded?' },
+    { id: 8, question: 'All leftover fancy labels verified & stored in return-to-stock area?' }
+  ]
+};
+
+// Fetch server config to pick up admin customisations
+fetch('/api/config')
+  .then(r => r.json())
+  .then(data => { if (data && data.productionFields) appConfig = data; })
+  .catch(() => {});
+
+// ── View system ─────────────────────────────────────────────────────────────
+function showView(id, title, subtitle, showBack) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.getElementById('header-title').textContent    = title    || '1235 Ormont';
+  document.getElementById('header-subtitle').textContent = subtitle || 'FGF Brands — Shutdown Report';
+  document.getElementById('btn-back').style.display      = showBack ? 'flex' : 'none';
+  document.getElementById('btn-admin-header').style.display = (id === 'view-admin' || id === 'view-admin-login') ? 'none' : 'flex';
+  window.scrollTo(0, 0);
+}
+
+function goBack() {
+  viewHistory.pop();
+  const prev = viewHistory[viewHistory.length - 1] || 'view-line-select';
+  if (prev === 'view-line-select') goHome();
+  else showView(prev, '1235 Ormont', 'FGF Brands — Shutdown Report', false);
+}
+
+function goHome() {
+  currentLine    = null;
+  selectedPhotos = [];
+  questionPhotos = {};
+  viewHistory    = ['view-line-select'];
+  document.getElementById('photo-preview').innerHTML = '';
+  document.getElementById('photo-input').value       = '';
+  document.getElementById('f-submittedBy').value     = '';
+  document.getElementById('f-productionName').value  = '';
+  showView('view-line-select', '1235 Ormont', 'FGF Brands — Shutdown Report', false);
+}
+
+// ── Line selection ──────────────────────────────────────────────────────────
+function selectLine(line) {
+  currentLine = line;
+  buildProductionFields();
+  buildChecklist();
+  viewHistory.push('view-form');
+  showView('view-form', `Line ${line}`, '1235 Ormont — Shutdown Report', true);
+}
+
+// ── Build production fields ─────────────────────────────────────────────────
+function buildProductionFields() {
+  const container = document.getElementById('production-fields-container');
+  if (!appConfig || !appConfig.productionFields) return;
+
+  container.innerHTML = appConfig.productionFields.map(f => {
+    const label = `<label class="field-label">${f.label}${f.required ? ' <span class="field-required">*</span>' : ''}</label>`;
+    // Render comment/text fields with id ending in 'Comment' as a textarea
+    const isTextarea = f.id.toLowerCase().includes('comment');
+    const input = isTextarea
+      ? `<textarea class="field-input" id="pf-${f.id}" data-fieldid="${f.id}" rows="3" style="resize:vertical" placeholder="Enter additional comments…"></textarea>`
+      : `<input class="field-input" type="${f.type}" id="pf-${f.id}" data-fieldid="${f.id}"
+           ${f.type === 'number' ? 'inputmode="numeric"' : ''}
+           ${f.required ? 'required' : ''} />`;
+    return `<div class="field-group">${label}${input}</div>`;
+  }).join('');
+}
+
+// ── Build checklist ─────────────────────────────────────────────────────────
+function buildChecklist() {
+  const container = document.getElementById('checklist-container');
+  if (!appConfig || !appConfig.checklistItems) return;
+  questionPhotos = {}; // reset per-question photos when rebuilding
+
+  container.innerHTML = appConfig.checklistItems.map(item => `
+    <div class="checklist-item">
+      <div class="cl-question">${item.question}</div>
+      <div class="cl-yn-row">
+        <button class="yn-btn yes" data-id="${item.id}" data-val="YES" onclick="selectYN(this)">✓ YES</button>
+        <button class="yn-btn no"  data-id="${item.id}" data-val="NO"  onclick="selectYN(this)">✗ NO</button>
+      </div>
+      <textarea class="cl-comment" id="comment-${item.id}" rows="2" placeholder="Comment (optional)…"></textarea>
+      <div class="cl-photo-row">
+        <button class="cl-photo-btn" type="button" onclick="document.getElementById('qphoto-${item.id}').click()">
+          📷 Add Photo
+        </button>
+        <input type="file" id="qphoto-${item.id}" accept="image/*" multiple capture="environment"
+          style="display:none" onchange="handleQPhoto(${item.id}, this.files)" />
+        <div class="qphoto-grid" id="qphoto-preview-${item.id}"></div>
+      </div>
+    </div>`).join('');
+}
+
+function selectYN(btn) {
+  const id = btn.dataset.id;
+  document.querySelectorAll(`.yn-btn[data-id="${id}"]`).forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ── Per-question photo handlers ──────────────────────────────────────────────
+function handleQPhoto(qId, files) {
+  if (!questionPhotos[qId]) questionPhotos[qId] = [];
+  Array.from(files).forEach(file => {
+    if (!file.type.startsWith('image/')) return;
+    questionPhotos[qId].push({ file, url: URL.createObjectURL(file) });
+  });
+  renderQPhotoPreview(qId);
+  // reset the input so same file can be re-added if needed
+  document.getElementById(`qphoto-${qId}`).value = '';
+}
+
+function renderQPhotoPreview(qId) {
+  const grid = document.getElementById(`qphoto-preview-${qId}`);
+  if (!grid) return;
+  const photos = questionPhotos[qId] || [];
+  grid.innerHTML = photos.map((p, i) => `
+    <div class="photo-thumb">
+      <img src="${p.url}" loading="lazy" />
+      <button class="photo-remove" onclick="removeQPhoto(${qId}, ${i})">×</button>
+    </div>`).join('');
+}
+
+function removeQPhoto(qId, i) {
+  URL.revokeObjectURL(questionPhotos[qId][i].url);
+  questionPhotos[qId].splice(i, 1);
+  renderQPhotoPreview(qId);
+}
+
+// ── Photos ──────────────────────────────────────────────────────────────────
+function handlePhotoSelect(files) {
+  Array.from(files).forEach(file => {
+    if (!file.type.startsWith('image/')) return;
+    selectedPhotos.push({ file, url: URL.createObjectURL(file) });
+  });
+  renderPhotoPreview();
+}
+function renderPhotoPreview() {
+  document.getElementById('photo-preview').innerHTML = selectedPhotos.map((p, i) => `
+    <div class="photo-thumb">
+      <img src="${p.url}" loading="lazy" />
+      <button class="photo-remove" onclick="removePhoto(${i})">×</button>
+    </div>`).join('');
+}
+function removePhoto(i) {
+  URL.revokeObjectURL(selectedPhotos[i].url);
+  selectedPhotos.splice(i, 1);
+  renderPhotoPreview();
+}
+
+const dropZone = document.getElementById('drop-zone');
+dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  handlePhotoSelect(e.dataTransfer.files);
+});
+
+// ── Submit ──────────────────────────────────────────────────────────────────
+async function submitForm() {
+  const submittedBy = document.getElementById('f-submittedBy').value.trim();
+  if (!submittedBy) { showToast('Please enter your name', 'error'); return; }
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Submitting…';
+
+  const fd = new FormData();
+  fd.append('line', currentLine);
+  fd.append('submittedBy', submittedBy);
+  fd.append('productionName', document.getElementById('f-productionName').value.trim());
+
+  appConfig.productionFields.forEach(f => {
+    const el = document.getElementById(`pf-${f.id}`);
+    if (el) fd.append(f.id, el.value);
+  });
+  appConfig.checklistItems.forEach(item => {
+    const ab = document.querySelector(`.yn-btn.active[data-id="${item.id}"]`);
+    fd.append(`checklist_answer_${item.id}`,  ab ? ab.dataset.val : '');
+    const cm = document.getElementById(`comment-${item.id}`);
+    fd.append(`checklist_comment_${item.id}`, cm ? cm.value.trim() : '');
+  });
+  // General photos
+  selectedPhotos.forEach(p => fd.append('photos', p.file));
+  // Per-question photos
+  Object.keys(questionPhotos).forEach(qId => {
+    questionPhotos[qId].forEach(p => fd.append(`question_photo_${qId}`, p.file));
+  });
+
+  try {
+    const r    = await fetch('/api/submit', { method: 'POST', body: fd });
+    const data = await r.json();
+    if (data.success) {
+      document.getElementById('success-line-msg').textContent = `Line ${currentLine} • ${new Date().toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+      selectedPhotos = [];
+      viewHistory.push('view-success');
+      showView('view-success', 'Report Submitted', '1235 Ormont', false);
+    } else throw new Error(data.error || 'Server error');
+  } catch(e) {
+    showToast('Submission failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'Submit Report';
+  }
+}
+
+// ── Admin ───────────────────────────────────────────────────────────────────
+function showAdminLogin() {
+  document.getElementById('admin-pwd-input').value = '';
+  document.getElementById('admin-login-err').style.display = 'none';
+  viewHistory.push('view-admin-login');
+  showView('view-admin-login', 'Admin Login', '1235 Ormont', true);
+}
+
+async function adminLogin() {
+  const pwd = document.getElementById('admin-pwd-input').value;
+  try {
+    const r = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pwd })
+    });
+    if (r.ok) {
+      adminPassword = pwd;
+      document.getElementById('admin-login-err').style.display = 'none';
+      viewHistory.push('view-admin');
+      showView('view-admin', 'Admin Panel', '1235 Ormont', true);
+      loadAdminData();
+    } else {
+      document.getElementById('admin-login-err').style.display = 'block';
+    }
+  } catch(e) { showToast('Login error', 'error'); }
+}
+
+async function adminFetch(url, opts = {}) {
+  return fetch(url, {
+    ...opts,
+    headers: { 'x-admin-password': adminPassword, 'Content-Type': 'application/json', ...(opts.headers || {}) }
+  });
+}
+
+async function loadAdminData() {
+  const r   = await adminFetch('/api/admin/config');
+  const cfg = await r.json();
+  buildEmailConfig(cfg);
+  buildAdminChecklist(cfg.checklistItems);
+  buildAdminFields(cfg.productionFields);
+  document.getElementById('smtp-host').value = cfg.smtpHost  || '';
+  document.getElementById('smtp-port').value = cfg.smtpPort  || 587;
+  document.getElementById('smtp-user').value = cfg.smtpUser  || '';
+  document.getElementById('smtp-from').value = cfg.emailFrom || '';
+  loadSubmissions();
+}
+
+// ── Admin: Emails ───────────────────────────────────────────────────────────
+const emailState = {};
+function buildEmailConfig(cfg) {
+  ['L02','L03','L05','L08'].forEach(l => { emailState[l] = [...(cfg.emailRecipients[l] || [])]; });
+  renderEmailConfig();
+}
+function renderEmailConfig() {
+  document.getElementById('email-config-container').innerHTML =
+    ['L02','L03','L05','L08'].map(line => `
+    <div class="email-section">
+      <div class="email-section-title">Line ${line}</div>
+      <div class="email-tags-wrap" id="tags-${line}">
+        ${(emailState[line]||[]).map(e => eTagHTML(line,e)).join('')}
+      </div>
+      <div class="email-add-row">
+        <input class="input" type="email" id="einput-${line}" placeholder="Add email…" style="flex:1"
+          onkeydown="if(event.key==='Enter'||event.key===','){event.preventDefault();addETag('${line}')}" />
+        <button class="btn btn-outline btn-sm" onclick="addETag('${line}')">Add</button>
+        <button class="btn btn-primary btn-sm" onclick="saveEmails('${line}')">Save</button>
+      </div>
+    </div>`).join('<div class="divider"></div>');
+}
+function eTagHTML(line, email) {
+  return `<span class="etag">${email}<button onclick="removeETag('${line}','${email}')">×</button></span>`;
+}
+function addETag(line) {
+  const inp = document.getElementById(`einput-${line}`);
+  const e   = inp.value.trim().replace(/,$/,'');
+  if (!e || !e.includes('@')) { showToast('Invalid email', 'error'); return; }
+  if (emailState[line].includes(e)) { showToast('Already added', 'error'); return; }
+  emailState[line].push(e); inp.value = '';
+  document.getElementById(`tags-${line}`).innerHTML = emailState[line].map(x => eTagHTML(line,x)).join('');
+}
+function removeETag(line, email) {
+  emailState[line] = emailState[line].filter(e => e !== email);
+  document.getElementById(`tags-${line}`).innerHTML = emailState[line].map(x => eTagHTML(line,x)).join('');
+}
+async function saveEmails(line) {
+  const r = await adminFetch('/api/admin/emails', { method: 'POST', body: JSON.stringify({ line, emails: emailState[line] }) });
+  r.ok ? showToast(`Saved emails for ${line}`, 'success') : showToast('Save failed', 'error');
+}
+
+// ── Admin: Checklist ────────────────────────────────────────────────────────
+let localChecklist = [];
+function buildAdminChecklist(items) { localChecklist = items.map(i=>({...i})); renderAdminChecklist(); }
+function renderAdminChecklist() {
+  document.getElementById('admin-checklist-list').innerHTML = localChecklist.map(item => `
+    <div class="admin-item">
+      <div class="admin-item-text" id="clt-${item.id}">${item.question}</div>
+      <button class="btn-icon btn-edit"   onclick="editCL(${item.id})">✏️</button>
+      <button class="btn-icon btn-delete" onclick="deleteCL(${item.id})">🗑</button>
+    </div>`).join('');
+}
+function editCL(id) {
+  const el  = document.getElementById(`clt-${id}`);
+  const cur = localChecklist.find(i=>i.id===id).question;
+  el.innerHTML = `<input class="input" id="cle-${id}" value="${cur.replace(/"/g,'&quot;')}" style="font-size:14px;padding:8px" />`;
+  el.nextElementSibling.textContent = '💾';
+  el.nextElementSibling.onclick = () => saveCLEdit(id);
+}
+async function saveCLEdit(id) {
+  const val = document.getElementById(`cle-${id}`).value.trim();
+  if (!val) return;
+  const r = await adminFetch(`/api/admin/checklist/${id}`, { method: 'PUT', body: JSON.stringify({ question: val }) });
+  if (r.ok) {
+    localChecklist.find(i=>i.id===id).question = val;
+    const cfg = await (await fetch('/api/config')).json();
+    if (cfg && cfg.productionFields) appConfig = cfg;
+    renderAdminChecklist();
+    showToast('Updated', 'success');
+  } else showToast('Failed', 'error');
+}
+async function deleteCL(id) {
+  if (!confirm('Delete this checklist item?')) return;
+  const r = await adminFetch(`/api/admin/checklist/${id}`, { method: 'DELETE' });
+  if (r.ok) {
+    localChecklist = localChecklist.filter(i=>i.id!==id);
+    const cfg = await (await fetch('/api/config')).json();
+    if (cfg && cfg.productionFields) appConfig = cfg;
+    renderAdminChecklist();
+    showToast('Deleted', 'success');
+  } else showToast('Failed', 'error');
+}
+async function addChecklistItem() {
+  const inp = document.getElementById('new-checklist-input');
+  const q   = inp.value.trim();
+  if (!q) return;
+  const r    = await adminFetch('/api/admin/checklist', { method: 'POST', body: JSON.stringify({ question: q }) });
+  const data = await r.json();
+  if (data.success) {
+    localChecklist.push(data.item);
+    const cfg = await (await fetch('/api/config')).json();
+    if (cfg && cfg.productionFields) appConfig = cfg;
+    inp.value = '';
+    renderAdminChecklist();
+    showToast('Added', 'success');
+  } else showToast('Failed', 'error');
+}
+
+// ── Admin: Fields ───────────────────────────────────────────────────────────
+let localFields = [];
+function buildAdminFields(fields) { localFields = fields.map(f=>({...f})); renderAdminFields(); }
+function renderAdminFields() {
+  document.getElementById('admin-fields-list').innerHTML = localFields.map(f => `
+    <div class="admin-item">
+      <div>
+        <div class="admin-item-text">${f.label}</div>
+        <div class="admin-item-type">${f.type}</div>
+      </div>
+      ${f.id.startsWith('field_')
+        ? `<button class="btn-icon btn-delete" onclick="deleteField('${f.id}')">🗑</button>`
+        : `<span style="font-size:11px;color:var(--muted);flex-shrink:0">Core</span>`}
+    </div>`).join('');
+}
+async function addProductionField() {
+  const label = document.getElementById('new-field-label').value.trim();
+  const type  = document.getElementById('new-field-type').value;
+  if (!label) { showToast('Enter a label', 'error'); return; }
+  const r    = await adminFetch('/api/admin/field', { method: 'POST', body: JSON.stringify({ label, type }) });
+  const data = await r.json();
+  if (data.success) {
+    localFields.push(data.field);
+    const cfg = await (await fetch('/api/config')).json();
+    if (cfg && cfg.productionFields) appConfig = cfg;
+    document.getElementById('new-field-label').value = '';
+    renderAdminFields();
+    showToast('Field added', 'success');
+  } else showToast('Failed', 'error');
+}
+async function deleteField(id) {
+  if (!confirm('Delete this field?')) return;
+  const r = await adminFetch(`/api/admin/field/${id}`, { method: 'DELETE' });
+  if (r.ok) {
+    localFields = localFields.filter(f=>f.id!==id);
+    const cfg = await (await fetch('/api/config')).json();
+    if (cfg && cfg.productionFields) appConfig = cfg;
+    renderAdminFields();
+    showToast('Deleted', 'success');
+  } else showToast('Failed', 'error');
+}
+
+// ── Admin: SMTP ─────────────────────────────────────────────────────────────
+async function saveSMTP() {
+  const body = {
+    smtpHost:  document.getElementById('smtp-host').value.trim(),
+    smtpPort:  document.getElementById('smtp-port').value,
+    smtpUser:  document.getElementById('smtp-user').value.trim(),
+    smtpPass:  document.getElementById('smtp-pass').value,
+    emailFrom: document.getElementById('smtp-from').value.trim()
+  };
+  const r = await adminFetch('/api/admin/smtp', { method: 'POST', body: JSON.stringify(body) });
+  r.ok ? showToast('SMTP saved', 'success') : showToast('Save failed', 'error');
+}
+
+// ── Admin: Submissions ──────────────────────────────────────────────────────
+async function loadSubmissions() {
+  const el = document.getElementById('submissions-list');
+  try {
+    const r    = await adminFetch('/api/admin/submissions');
+    const data = await r.json();
+    if (!data.length) { el.innerHTML = '<p class="text-muted" style="text-align:center;padding:30px 0;">No submissions yet</p>'; return; }
+    el.innerHTML = data.map(s => `
+      <div class="submission-card">
+        <div class="sc-head">
+          <span class="sc-line label-badge">${s.line}</span>
+          <span class="sc-time">${new Date(s.submittedAt).toLocaleString('en-CA',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',hour12:true})}</span>
+        </div>
+        <div class="sc-prod">${s.productionName || '—'}</div>
+        <div class="sc-by">By: ${s.submittedBy || '—'} &nbsp;·&nbsp; ${s.photos ? s.photos.length : 0} 📷</div>
+      </div>`).join('');
+  } catch(e) { el.innerHTML = '<p style="color:var(--red);text-align:center;padding:30px 0;">Failed to load</p>'; }
+}
+
+// ── Admin: Password ─────────────────────────────────────────────────────────
+async function changePassword() {
+  const np = document.getElementById('new-pwd').value;
+  const cp = document.getElementById('confirm-pwd').value;
+  if (!np || np.length < 6) { showToast('Min 6 characters', 'error'); return; }
+  if (np !== cp) { showToast('Passwords do not match', 'error'); return; }
+  const r = await adminFetch('/api/admin/password', { method: 'POST', body: JSON.stringify({ newPassword: np }) });
+  if (r.ok) {
+    adminPassword = np;
+    document.getElementById('new-pwd').value = document.getElementById('confirm-pwd').value = '';
+    showToast('Password updated', 'success');
+  } else showToast('Update failed', 'error');
+}
+
+// ── Tabs ─────────────────────────────────────────────────────────────────────
+function showTab(id, btn) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (id === 'tab-submissions') loadSubmissions();
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+let _tt;
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = 'show ' + type;
+  clearTimeout(_tt);
+  _tt = setTimeout(() => t.className = '', 3000);
+}
+</script>
+</body>
+</html>

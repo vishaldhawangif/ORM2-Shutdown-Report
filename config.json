@@ -1,0 +1,36 @@
+{
+  "adminPassword": "1234",
+  "smtpHost": "smtp.gmail.com",
+  "smtpPort": 587,
+  "smtpUser": "",
+  "smtpPass": "",
+  "emailFrom": "",
+  "emailRecipients": {
+    "L02": [],
+    "L03": [],
+    "L05": [],
+    "L08": []
+  },
+  "checklistItems": [
+    { "id": 1, "question": "Any belt damaged at Fritsch? Write specified belt number." },
+    { "id": 2, "question": "Flour dusters & TBP & Fat pump plugged in dummy plug?" },
+    { "id": 3, "question": "Is the oven empty and doors are open?" },
+    { "id": 4, "question": "Proofer and Freezer off?" },
+    { "id": 5, "question": "QA tool record — Packaging and Dividing handed over to the QA Team?" },
+    { "id": 6, "question": "Packaging, Dividing, and Baking carts cleaned & RF scanner charged?" },
+    { "id": 7, "question": "All leftover manual case labels discarded?" },
+    { "id": 8, "question": "All leftover fancy labels verified & stored in return-to-stock area?" }
+  ],
+  "productionFields": [
+    { "id": "doughMO", "label": "Dough MO#", "type": "text", "required": true },
+    { "id": "batches", "label": "Batches", "type": "number", "required": true },
+    { "id": "lastDoughSection1", "label": "Time Last Dough Passed at Section 1", "type": "time", "required": true },
+    { "id": "lastDoughSection7", "label": "Time Last Dough Passed at Section 7", "type": "time", "required": true },
+    { "id": "packagingMO", "label": "Packaging MO#", "type": "text", "required": true },
+    { "id": "casesProduced",     "label": "Cases Produced",            "type": "number", "required": true },
+    { "id": "lastProductFinish", "label": "Last Product Finish Time",  "type": "time",   "required": true },
+    { "id": "partialSkids",      "label": "Partial Skids",             "type": "number", "required": false },
+    { "id": "casesInPartial",    "label": "Cases in Partial Skid",     "type": "number", "required": false },
+    { "id": "productionComment", "label": "Additional Comments",       "type": "text",   "required": false }
+  ]
+}
