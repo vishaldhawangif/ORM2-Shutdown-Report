@@ -30,10 +30,23 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(UPLOADS_DIR));
 
 // ─── Config helpers ───────────────────────────────────────────────────────────
+// Environment variables always win over config.json — they survive redeploys.
+// Set these in Render Dashboard → Environment tab.
 function getConfig() {
-  return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+  const file = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+  // Override with env vars if present
+  if (process.env.SMTP_HOST)      file.smtpHost      = process.env.SMTP_HOST;
+  if (process.env.SMTP_PORT)      file.smtpPort      = parseInt(process.env.SMTP_PORT);
+  if (process.env.SMTP_USER)      file.smtpUser      = process.env.SMTP_USER;
+  if (process.env.SMTP_PASS)      file.smtpPass      = process.env.SMTP_PASS;
+  if (process.env.SMTP_FROM)      file.emailFrom     = process.env.SMTP_FROM;
+  if (process.env.ADMIN_PASSWORD) file.adminPassword = process.env.ADMIN_PASSWORD;
+  return file;
 }
 function saveConfig(cfg) {
+  // Writes to config.json — note env vars still override on next read.
+  // SMTP/password changes via admin panel apply immediately but revert on redeploy
+  // unless the matching env var is also updated in Render.
   fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2));
 }
 
@@ -321,6 +334,51 @@ app.post('/api/admin/smtp', adminAuth, (req, res) => {
   if (emailFrom) cfg.emailFrom = emailFrom;
   saveConfig(cfg);
   res.json({ success: true });
+});
+
+// ── Test Email ──
+app.post('/api/admin/test-email', adminAuth, async (req, res) => {
+  const cfg = getConfig();
+  const { testAddress } = req.body;
+
+  if (!cfg.smtpUser || !cfg.smtpPass) {
+    return res.status(400).json({ error: 'SMTP credentials not configured. Save your SMTP settings first.' });
+  }
+  if (!testAddress) {
+    return res.status(400).json({ error: 'Please provide a test email address.' });
+  }
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host:   cfg.smtpHost,
+      port:   cfg.smtpPort,
+      secure: cfg.smtpPort === 465,
+      auth:   { user: cfg.smtpUser, pass: cfg.smtpPass }
+    });
+
+    await transporter.verify();   // checks credentials before sending
+    await transporter.sendMail({
+      from:    `"FGF Shutdown Report" <${cfg.emailFrom || cfg.smtpUser}>`,
+      to:      testAddress,
+      subject: '✅ FGF Shutdown Report — Test Email',
+      html: `
+        <div style="font-family:Arial,sans-serif;padding:24px;max-width:500px">
+          <div style="background:#388e3c;color:#fff;padding:16px 20px;border-radius:8px 8px 0 0">
+            <strong>FGF Brands — 1235 Ormont</strong>
+          </div>
+          <div style="border:1px solid #ddd;border-top:none;padding:20px;border-radius:0 0 8px 8px">
+            <p>✅ Your SMTP settings are working correctly.</p>
+            <p>Shutdown report emails will be delivered successfully.</p>
+            <p style="color:#888;font-size:12px;margin-top:16px">Sent from the FGF Shutdown Report admin panel.</p>
+          </div>
+        </div>`
+    });
+
+    res.json({ success: true, message: `Test email sent to ${testAddress}` });
+  } catch (err) {
+    console.error('Test email error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ── Email recipients ──
